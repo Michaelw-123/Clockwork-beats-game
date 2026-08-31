@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Clockwork Beats — Quod Erat Ludendum</title>
+  <title>Clockwork Beats</title>
   <style>
     :root {
       --bg: #0f172a;
       --card: #1e293b;
       --accent: #38bdf8;
+      --success: #22c55e;
       --text: #f8fafc;
       --muted: #94a3b8;
     }
@@ -24,7 +25,7 @@
       min-height: 100vh;
       padding: 1rem;
     }
-    h1 { margin: 0 0 0.5rem 0; color: var(--accent); }
+    h1 { margin: 0; color: var(--accent); font-size: 1.8rem; }
     .container {
       background: var(--card);
       padding: 1.5rem;
@@ -34,15 +35,26 @@
       flex-direction: column;
       align-items: center;
       gap: 1rem;
-      max-width: 500px;
+      max-width: 480px;
       width: 100%;
     }
+    .level-card {
+      background: #090d16;
+      border: 1px solid var(--accent);
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      width: 100%;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .level-title { font-weight: bold; color: var(--accent); margin-bottom: 0.25rem; }
+    .level-desc { font-size: 0.88rem; color: var(--text); }
     canvas {
       background: #090d16;
       border-radius: 0.5rem;
       width: 100%;
       height: auto;
-      max-width: 400px;
+      max-width: 380px;
       aspect-ratio: 1;
     }
     .controls {
@@ -55,12 +67,12 @@
       display: flex;
       flex-direction: column;
       gap: 0.25rem;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
     input[type="range"] { accent-color: var(--accent); }
     .stats {
       font-family: monospace;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: var(--muted);
       text-align: center;
     }
@@ -76,42 +88,88 @@
       font-size: 1rem;
     }
     .btn:hover { opacity: 0.9; }
+    .win-banner {
+      display: none;
+      background: var(--success);
+      color: #000;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      width: 100%;
+      text-align: center;
+      font-weight: bold;
+      box-sizing: border-box;
+    }
   </style>
 </head>
 <body>
 
 <div class="container">
   <h1>Clockwork Beats</h1>
+  
+  <div class="level-card">
+    <div class="level-title" id="level-title">Level 1</div>
+    <div class="level-desc" id="level-desc">Goal description loading...</div>
+  </div>
+
   <canvas id="canvas" width="400" height="400"></canvas>
   
+  <div class="win-banner" id="win-banner">
+    🎉 Level Complete! Mathematical Harmony Achieved!
+  </div>
+
   <div class="stats" id="stats">GCD(12, 5) = 1 | Coprime: YES</div>
 
   <div class="controls">
     <div class="control-group">
-      <label>Clock Beats (N): <span id="n-val">12</span></label>
-      <input type="range" id="n-slider" min="3" max="24" value="12">
+      <label>Step Size (K): <span id="k-val">1</span></label>
+      <input type="range" id="k-slider" min="1" max="11" value="1">
     </div>
     <div class="control-group">
-      <label>Step Size (K): <span id="k-val">5</span></label>
-      <input type="range" id="k-slider" min="1" max="11" value="5">
-    </div>
-    <div class="control-group" style="grid-column: span 2;">
-      <label>Tempo (BPM): <span id="bpm-val">130</span></label>
-      <input type="range" id="bpm-slider" min="60" max="240" value="130">
+      <label>Tempo (BPM): <span id="bpm-val">140</span></label>
+      <input type="range" id="bpm-slider" min="60" max="240" value="140">
     </div>
     <button class="btn" id="play-btn">Start Playback</button>
   </div>
 </div>
 
 <script>
+  const levels = [
+    {
+      title: "Level 1: The Full Ring",
+      N: 12,
+      desc: "Find a step size K coprime to 12 to visit ALL 12 beats in 1 single loop!",
+      check: (visited, N, K) => visited.size === 12
+    },
+    {
+      title: "Level 2: The Perfect Square",
+      N: 12,
+      desc: "Find a step size K that creates a 4-beat loop (a square)!",
+      check: (visited, N, K) => visited.size === 4
+    },
+    {
+      title: "Level 3: The Pentagon",
+      N: 15,
+      desc: "Clock size is N = 15. Find a step size K that visits exactly 5 beats!",
+      check: (visited, N, K) => visited.size === 5
+    },
+    {
+      title: "Level 4: Prime Star",
+      N: 17,
+      desc: "Clock size N = 17 is Prime! Can you find a K that visits all 17 beats?",
+      check: (visited, N, K) => visited.size === 17
+    }
+  ];
+
+  let currentLevelIdx = 0;
+  
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
-  const nSlider = document.getElementById('n-slider');
   const kSlider = document.getElementById('k-slider');
   const bpmSlider = document.getElementById('bpm-slider');
   const playBtn = document.getElementById('play-btn');
+  const winBanner = document.getElementById('win-banner');
 
-  let N = parseInt(nSlider.value);
+  let N = levels[0].N;
   let K = parseInt(kSlider.value);
   let BPM = parseInt(bpmSlider.value);
   let currentPos = 0;
@@ -120,6 +178,7 @@
   let isPlaying = false;
   let timer = null;
   let audioCtx = null;
+  let levelCleared = false;
 
   function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
 
@@ -127,41 +186,77 @@
     if (!audioCtx) return;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    
-    // Scale frequency based on node position
     const baseFreq = 220;
     const freq = baseFreq * Math.pow(2, nodeIndex / 12);
     
     osc.type = 'sine';
     osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-    
-    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
     
     osc.connect(gain);
     gain.connect(audioCtx.destination);
     osc.start();
-    osc.stop(audioCtx.currentTime + 0.3);
+    osc.stop(audioCtx.currentTime + 0.25);
   }
 
- function step() {
-  const nextPos = (currentPos + K) % N;
-  visitedEdges.add(`${currentPos}->${nextPos}`);
-  currentPos = nextPos;
-  visitedNodes.add(currentPos);
-  
-  if (audioCtx) playSynth(currentPos);
-  draw();
-  updateStats();
-}
+  function step() {
+    const nextPos = (currentPos + K) % N;
+    visitedEdges.add(`${currentPos}->${nextPos}`);
+    currentPos = nextPos;
+    visitedNodes.add(currentPos);
+    
+    if (audioCtx) playSynth(currentPos);
+    draw();
+    updateStats();
+    checkWinCondition();
+  }
+
+  function checkWinCondition() {
+    const currentLevel = levels[currentLevelIdx];
+    if (!levelCleared && currentLevel.check(visitedNodes, N, K)) {
+      levelCleared = true;
+      winBanner.style.display = 'block';
+      if (currentLevelIdx < levels.length - 1) {
+        setTimeout(() => {
+          if (confirm("Great job! Advance to the next level?")) {
+            nextLevel();
+          }
+        }, 600);
+      } else {
+        winBanner.innerText = "🏆 You beat all levels! You mastered Modular Arithmetic!";
+      }
+    }
+  }
+
+  function nextLevel() {
+    currentLevelIdx++;
+    loadLevel(currentLevelIdx);
+  }
+
+  function loadLevel(idx) {
+    const lvl = levels[idx];
+    N = lvl.N;
+    document.getElementById('level-title').innerText = lvl.title;
+    document.getElementById('level-desc').innerText = lvl.desc;
+    
+    kSlider.max = N - 1;
+    K = 1;
+    kSlider.value = 1;
+    document.getElementById('k-val').innerText = K;
+    
+    levelCleared = false;
+    winBanner.style.display = 'none';
+    reset();
+    updateStats();
+  }
 
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
-    const radius = 150;
+    const radius = 140;
 
-    // Node coordinates
     const nodes = [];
     for (let i = 0; i < N; i++) {
       const angle = (i * 2 * Math.PI / N) - Math.PI / 2;
@@ -171,7 +266,6 @@
       });
     }
 
-    // Draw lines
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 2;
     visitedEdges.forEach(edge => {
@@ -182,7 +276,6 @@
       ctx.stroke();
     });
 
-    // Draw nodes
     nodes.forEach((node, i) => {
       ctx.beginPath();
       ctx.arc(node.x, node.y, 8, 0, Math.PI * 2);
@@ -201,21 +294,14 @@
   function updateStats() {
     const g = gcd(N, K);
     const coprime = g === 1 ? 'YES' : 'NO';
-    document.getElementById('stats').innerText = `GCD(${N}, ${K}) = ${g} | Coprime: ${coprime} | Visited: ${visitedNodes.size}/${N}`;
+    document.getElementById('stats').innerText = `Clock (N): ${N} | GCD(${N}, ${K}) = ${g} | Visited: ${visitedNodes.size}/${N}`;
   }
-
-  nSlider.addEventListener('input', (e) => {
-    N = parseInt(e.target.value);
-    document.getElementById('n-val').innerText = N;
-    kSlider.max = N - 1;
-    if (K >= N) { K = N - 1; kSlider.value = K; document.getElementById('k-val').innerText = K; }
-    reset();
-    updateStats();
-  });
 
   kSlider.addEventListener('input', (e) => {
     K = parseInt(e.target.value);
     document.getElementById('k-val').innerText = K;
+    levelCleared = false;
+    winBanner.style.display = 'none';
     reset();
     updateStats();
   });
@@ -240,8 +326,7 @@
     }
   });
 
-  updateStats();
-  draw();
+  loadLevel(0);
 </script>
 </body>
 </html>
