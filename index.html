@@ -225,25 +225,67 @@
       minK: 1
     },
     {
-      title: "Level 2: The Square",
+      title: "Level 2: The Triangle",
       N: 12,
-      desc: "Find a step size K that completes a closed 4-beat loop (a square)!",
+      desc: "Find a step size K that completes a 3-beat closed loop (an equilateral triangle)!",
+      targetNodes: 3,
+      minK: 1
+    },
+    {
+      title: "Level 3: The Square",
+      N: 12,
+      desc: "Find a step size K that completes a 4-beat closed loop (a square)!",
       targetNodes: 4,
       minK: 1
     },
     {
-      title: "Level 3: The Regular Pentagon",
+      title: "Level 4: The Hexagon",
+      N: 12,
+      desc: "Find a step size K that completes a closed 6-beat loop (a regular hexagon)!",
+      targetNodes: 6,
+      minK: 1
+    },
+    {
+      title: "Level 5: The Regular Pentagon",
       N: 15,
       desc: "Clock size N = 15. Find a step size K that completes a closed 5-beat loop!",
       targetNodes: 5,
       minK: 1
     },
     {
-      title: "Level 4: Prime 17-Star",
+      title: "Level 6: Prime 13-Star",
+      N: 13,
+      desc: "N = 13 is Prime! Find a step size K (> 1) that visits all 13 beats in a star loop.",
+      targetNodes: 13,
+      minK: 2
+    },
+    {
+      title: "Level 7: The Octagon",
+      N: 16,
+      desc: "Clock size N = 16. Find a step size K that completes a closed 8-beat loop!",
+      targetNodes: 8,
+      minK: 1
+    },
+    {
+      title: "Level 8: Prime 17-Star",
       N: 17,
       desc: "N = 17 is Prime! Find a step size K (> 1) that visits all 17 beats in a complete star loop.",
       targetNodes: 17,
       minK: 2
+    },
+    {
+      title: "Level 9: The Nonagon",
+      N: 18,
+      desc: "Clock size N = 18. Find a step size K that visits exactly 9 beats in a closed loop!",
+      targetNodes: 9,
+      minK: 1
+    },
+    {
+      title: "Level 10: Grand Clock 20-Star",
+      N: 20,
+      desc: "Final Challenge! Find a step size K (K ≥ 3) coprime to 20 to hit all 20 beats!",
+      targetNodes: 20,
+      minK: 3
     }
   ];
 
@@ -327,7 +369,7 @@
       levelCleared = true;
       winBanner.style.display = 'block';
       if (currentLevelIdx >= levels.length - 1) {
-        document.getElementById('win-text').innerText = "You completed all levels! Modular Arithmetic Mastered!";
+        document.getElementById('win-text').innerText = "🏆 You completed all 10 levels! Modular Arithmetic Mastered!";
         bannerNextBtn.style.display = 'none';
       } else {
         document.getElementById('win-text').innerText = "Harmony Achieved! Shape completed.";
