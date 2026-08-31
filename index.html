@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Clockwork Beats</title>
+  <title>Clockwork Beats — Quod Erat Ludendum</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -37,6 +37,26 @@
       gap: 1rem;
       max-width: 480px;
       width: 100%;
+      box-sizing: border-box;
+    }
+    .mode-switch {
+      display: flex;
+      gap: 0.5rem;
+      width: 100%;
+    }
+    .mode-btn {
+      flex: 1;
+      padding: 0.5rem;
+      border: 1px solid var(--accent);
+      background: transparent;
+      color: var(--text);
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .mode-btn.active {
+      background: var(--accent);
+      color: #000;
     }
     .level-card {
       background: #090d16;
@@ -90,14 +110,24 @@
     .btn:hover { opacity: 0.9; }
     .win-banner {
       display: none;
-      background: var(--success);
-      color: #000;
+      background: #064e3b;
+      border: 1px solid var(--success);
+      color: #f8fafc;
       padding: 0.75rem;
       border-radius: 0.5rem;
       width: 100%;
       text-align: center;
-      font-weight: bold;
       box-sizing: border-box;
+    }
+    .next-btn {
+      background: var(--success);
+      color: #000;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.25rem;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 0.5rem;
     }
   </style>
 </head>
@@ -105,26 +135,36 @@
 
 <div class="container">
   <h1>Clockwork Beats</h1>
+
+  <div class="mode-switch">
+    <button class="mode-btn active" id="btn-puzzle">Puzzle Mode</button>
+    <button class="mode-btn" id="btn-free">Free Exploration</button>
+  </div>
   
-  <div class="level-card">
+  <div class="level-card" id="level-card">
     <div class="level-title" id="level-title">Level 1</div>
-    <div class="level-desc" id="level-desc">Goal description loading...</div>
+    <div class="level-desc" id="level-desc">Loading level...</div>
   </div>
 
   <canvas id="canvas" width="400" height="400"></canvas>
   
   <div class="win-banner" id="win-banner">
-    🎉 Level Complete! Mathematical Harmony Achieved!
+    <div id="win-text">🎉 Harmony Achieved! Target shape formed.</div>
+    <button class="next-btn" id="next-level-btn">Next Level ➔</button>
   </div>
 
-  <div class="stats" id="stats">GCD(12, 5) = 1 | Coprime: YES</div>
+  <div class="stats" id="stats">GCD(12, 1) = 1 | Coprime: YES</div>
 
   <div class="controls">
-    <div class="control-group">
+    <div class="control-group" id="n-group" style="display: none;">
+      <label>Clock Beats (N): <span id="n-val">12</span></label>
+      <input type="range" id="n-slider" min="3" max="24" value="12">
+    </div>
+    <div class="control-group" id="k-group">
       <label>Step Size (K): <span id="k-val">1</span></label>
       <input type="range" id="k-slider" min="1" max="11" value="1">
     </div>
-    <div class="control-group">
+    <div class="control-group" id="bpm-group">
       <label>Tempo (BPM): <span id="bpm-val">140</span></label>
       <input type="range" id="bpm-slider" min="60" max="240" value="140">
     </div>
@@ -137,40 +177,48 @@
     {
       title: "Level 1: The Full Ring",
       N: 12,
-      desc: "Find a step size K coprime to 12 to visit ALL 12 beats in 1 single loop!",
-      check: (visited, N, K) => visited.size === 12
+      desc: "Find a step size K coprime to 12 that forms a star visiting ALL 12 beats in a single closed loop!",
+      targetNodes: 12
     },
     {
-      title: "Level 2: The Perfect Square",
+      title: "Level 2: The Square",
       N: 12,
-      desc: "Find a step size K that creates a 4-beat loop (a square)!",
-      check: (visited, N, K) => visited.size === 4
+      desc: "Find a step size K that completes a closed 4-beat loop (a square)!",
+      targetNodes: 4
     },
     {
-      title: "Level 3: The Pentagon",
+      title: "Level 3: The Regular Pentagon",
       N: 15,
-      desc: "Clock size is N = 15. Find a step size K that visits exactly 5 beats!",
-      check: (visited, N, K) => visited.size === 5
+      desc: "Clock size N = 15. Find a step size K that completes a closed loop visiting exactly 5 beats!",
+      targetNodes: 5
     },
     {
-      title: "Level 4: Prime Star",
+      title: "Level 4: Prime 17-Star",
       N: 17,
-      desc: "Clock size N = 17 is Prime! Can you find a K that visits all 17 beats?",
-      check: (visited, N, K) => visited.size === 17
+      desc: "N = 17 is Prime! Find a K (> 1) that visits all 17 beats in a complete loop.",
+      targetNodes: 17,
+      minK: 2
     }
   ];
 
+  let mode = 'puzzle'; // 'puzzle' or 'free'
   let currentLevelIdx = 0;
   
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
+  const nSlider = document.getElementById('n-slider');
   const kSlider = document.getElementById('k-slider');
   const bpmSlider = document.getElementById('bpm-slider');
   const playBtn = document.getElementById('play-btn');
   const winBanner = document.getElementById('win-banner');
+  const nextLevelBtn = document.getElementById('next-level-btn');
+  const btnPuzzle = document.getElementById('btn-puzzle');
+  const btnFree = document.getElementById('btn-free');
+  const levelCard = document.getElementById('level-card');
+  const nGroup = document.getElementById('n-group');
 
   let N = levels[0].N;
-  let K = parseInt(kSlider.value);
+  let K = 1;
   let BPM = parseInt(bpmSlider.value);
   let currentPos = 0;
   let visitedEdges = new Set();
@@ -209,29 +257,30 @@
     if (audioCtx) playSynth(currentPos);
     draw();
     updateStats();
-    checkWinCondition();
-  }
 
-  function checkWinCondition() {
-    const currentLevel = levels[currentLevelIdx];
-    if (!levelCleared && currentLevel.check(visitedNodes, N, K)) {
-      levelCleared = true;
-      winBanner.style.display = 'block';
-      if (currentLevelIdx < levels.length - 1) {
-        setTimeout(() => {
-          if (confirm("Great job! Advance to the next level?")) {
-            nextLevel();
-          }
-        }, 600);
-      } else {
-        winBanner.innerText = "🏆 You beat all levels! You mastered Modular Arithmetic!";
-      }
+    // Check win condition ONLY when a full loop closes back to start (0)
+    if (currentPos === 0) {
+      checkWinCondition();
     }
   }
 
-  function nextLevel() {
-    currentLevelIdx++;
-    loadLevel(currentLevelIdx);
+  function checkWinCondition() {
+    if (mode !== 'puzzle' || levelCleared) return;
+
+    const currentLevel = levels[currentLevelIdx];
+    const validK = !currentLevel.minK || K >= currentLevel.minK;
+
+    if (visitedNodes.size === currentLevel.targetNodes && validK) {
+      levelCleared = true;
+      winBanner.style.display = 'block';
+      if (currentLevelIdx >= levels.length - 1) {
+        document.getElementById('win-text').innerText = "🏆 You completed all levels! Modular Arithmetic Mastered!";
+        nextLevelBtn.style.display = 'none';
+      } else {
+        document.getElementById('win-text').innerText = "🎉 Harmony Achieved! Shape completed.";
+        nextLevelBtn.style.display = 'inline-block';
+      }
+    }
   }
 
   function loadLevel(idx) {
@@ -247,6 +296,33 @@
     
     levelCleared = false;
     winBanner.style.display = 'none';
+    reset();
+    updateStats();
+  }
+
+  function setMode(newMode) {
+    mode = newMode;
+    btnPuzzle.classList.toggle('active', mode === 'puzzle');
+    btnFree.classList.toggle('active', mode === 'free');
+    
+    if (mode === 'free') {
+      levelCard.style.display = 'none';
+      winBanner.style.display = 'none';
+      nGroup.style.display = 'flex';
+      kGroupStyleForFree();
+    } else {
+      levelCard.style.display = 'block';
+      nGroup.style.display = 'none';
+      loadLevel(currentLevelIdx);
+    }
+  }
+
+  function kGroupStyleForFree() {
+    N = parseInt(nSlider.value);
+    kSlider.max = N - 1;
+    if (K >= N) K = N - 1;
+    kSlider.value = K;
+    document.getElementById('k-val').innerText = K;
     reset();
     updateStats();
   }
@@ -306,6 +382,14 @@
     updateStats();
   });
 
+  nSlider.addEventListener('input', (e) => {
+    if (mode === 'free') {
+      N = parseInt(e.target.value);
+      document.getElementById('n-val').innerText = N;
+      kGroupStyleForFree();
+    }
+  });
+
   bpmSlider.addEventListener('input', (e) => {
     BPM = parseInt(e.target.value);
     document.getElementById('bpm-val').innerText = BPM;
@@ -325,6 +409,16 @@
       clearInterval(timer);
     }
   });
+
+  nextLevelBtn.addEventListener('click', () => {
+    if (currentLevelIdx < levels.length - 1) {
+      currentLevelIdx++;
+      loadLevel(currentLevelIdx);
+    }
+  });
+
+  btnPuzzle.addEventListener('click', () => setMode('puzzle'));
+  btnFree.addEventListener('click', () => setMode('free'));
 
   loadLevel(0);
 </script>
