@@ -13,6 +13,7 @@
       --text: #f8fafc;
       --muted: #94a3b8;
     }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       background: var(--bg);
@@ -25,39 +26,49 @@
       min-height: 100vh;
       padding: 1rem;
     }
-    h1 { margin: 0; color: var(--accent); font-size: 1.8rem; }
+    h1 { margin: 0 0 0.5rem 0; color: var(--accent); font-size: 1.8rem; text-align: center; }
+    
     .container {
       background: var(--card);
-      padding: 1.5rem;
+      padding: 1.25rem;
       border-radius: 1rem;
       box-shadow: 0 10px 25px rgba(0,0,0,0.5);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 1rem;
+      gap: 0.85rem;
       max-width: 480px;
       width: 100%;
-      box-sizing: border-box;
     }
+
+    /* Mode Selector Header */
     .mode-switch {
       display: flex;
-      gap: 0.5rem;
       width: 100%;
+      background: #090d16;
+      border: 1px solid #334155;
+      border-radius: 0.5rem;
+      padding: 0.25rem;
+      gap: 0.25rem;
     }
     .mode-btn {
       flex: 1;
-      padding: 0.5rem;
-      border: 1px solid var(--accent);
+      padding: 0.6rem;
+      border: none;
       background: transparent;
-      color: var(--text);
-      border-radius: 0.5rem;
+      color: var(--muted);
+      border-radius: 0.35rem;
       cursor: pointer;
       font-weight: bold;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
     }
     .mode-btn.active {
       background: var(--accent);
       color: #000;
     }
+
+    /* Level / Puzzle Display Card */
     .level-card {
       background: #090d16;
       border: 1px solid var(--accent);
@@ -65,10 +76,26 @@
       padding: 0.75rem 1rem;
       width: 100%;
       text-align: center;
-      box-sizing: border-box;
     }
-    .level-title { font-weight: bold; color: var(--accent); margin-bottom: 0.25rem; }
-    .level-desc { font-size: 0.88rem; color: var(--text); }
+    .level-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.35rem;
+    }
+    .level-title { font-weight: bold; color: var(--accent); font-size: 1rem; }
+    .nav-btn {
+      background: #334155;
+      color: var(--text);
+      border: none;
+      padding: 0.3rem 0.6rem;
+      border-radius: 0.25rem;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .nav-btn:hover { background: #475569; }
+    .level-desc { font-size: 0.85rem; color: var(--text); line-height: 1.3; }
+
     canvas {
       background: #090d16;
       border-radius: 0.5rem;
@@ -77,10 +104,40 @@
       max-width: 380px;
       aspect-ratio: 1;
     }
+
+    /* Victory Banner */
+    .win-banner {
+      display: none;
+      background: #064e3b;
+      border: 1px solid var(--success);
+      color: #f8fafc;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      width: 100%;
+      text-align: center;
+    }
+    .win-btn {
+      background: var(--success);
+      color: #000;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.3rem;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+
+    .stats {
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
     .controls {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 1rem;
+      gap: 0.75rem;
       width: 100%;
     }
     .control-group {
@@ -90,12 +147,7 @@
       font-size: 0.85rem;
     }
     input[type="range"] { accent-color: var(--accent); }
-    .stats {
-      font-family: monospace;
-      font-size: 0.85rem;
-      color: var(--muted);
-      text-align: center;
-    }
+    
     .btn {
       grid-column: span 2;
       background: var(--accent);
@@ -108,27 +160,6 @@
       font-size: 1rem;
     }
     .btn:hover { opacity: 0.9; }
-    .win-banner {
-      display: none;
-      background: #064e3b;
-      border: 1px solid var(--success);
-      color: #f8fafc;
-      padding: 0.75rem;
-      border-radius: 0.5rem;
-      width: 100%;
-      text-align: center;
-      box-sizing: border-box;
-    }
-    .next-btn {
-      background: var(--success);
-      color: #000;
-      border: none;
-      padding: 0.5rem 1rem;
-      border-radius: 0.25rem;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 0.5rem;
-    }
   </style>
 </head>
 <body>
@@ -136,38 +167,51 @@
 <div class="container">
   <h1>Clockwork Beats</h1>
 
+  <!-- Mode Selector -->
   <div class="mode-switch">
-    <button class="mode-btn active" id="btn-puzzle">Puzzle Mode</button>
-    <button class="mode-btn" id="btn-free">Free Exploration</button>
+    <button class="mode-btn active" id="btn-mode-puzzle">🧩 Puzzle Mode</button>
+    <button class="mode-btn" id="btn-mode-free">🎨 Free Exploration</button>
   </div>
-  
+
+  <!-- Level Banner (Puzzle Mode Only) -->
   <div class="level-card" id="level-card">
-    <div class="level-title" id="level-title">Level 1</div>
-    <div class="level-desc" id="level-desc">Loading level...</div>
+    <div class="level-header">
+      <button class="nav-btn" id="prev-level-btn">◀ Prev</button>
+      <span class="level-title" id="level-title">Level 1</span>
+      <button class="nav-btn" id="header-next-btn">Next ▶</button>
+    </div>
+    <div class="level-desc" id="level-desc">Loading...</div>
   </div>
 
   <canvas id="canvas" width="400" height="400"></canvas>
   
+  <!-- In-Screen Victory Banner -->
   <div class="win-banner" id="win-banner">
-    <div id="win-text">🎉 Harmony Achieved! Target shape formed.</div>
-    <button class="next-btn" id="next-level-btn">Next Level ➔</button>
+    <div id="win-text">🎉 Harmony Achieved! Shape completed.</div>
+    <button class="win-btn" id="banner-next-btn">Next Level ➔</button>
   </div>
 
   <div class="stats" id="stats">GCD(12, 1) = 1 | Coprime: YES</div>
 
   <div class="controls">
-    <div class="control-group" id="n-group" style="display: none;">
+    <!-- Clock Size (N) - Visible in Free Exploration Mode -->
+    <div class="control-group" id="n-group" style="display: none; grid-column: span 2;">
       <label>Clock Beats (N): <span id="n-val">12</span></label>
       <input type="range" id="n-slider" min="3" max="24" value="12">
     </div>
+
+    <!-- Step Size (K) -->
     <div class="control-group" id="k-group">
       <label>Step Size (K): <span id="k-val">1</span></label>
       <input type="range" id="k-slider" min="1" max="11" value="1">
     </div>
-    <div class="control-group" id="bpm-group">
+
+    <!-- Tempo BPM -->
+    <div class="control-group">
       <label>Tempo (BPM): <span id="bpm-val">140</span></label>
       <input type="range" id="bpm-slider" min="60" max="240" value="140">
     </div>
+
     <button class="btn" id="play-btn">Start Playback</button>
   </div>
 </div>
@@ -177,45 +221,56 @@
     {
       title: "Level 1: The Full Ring",
       N: 12,
-      desc: "Find a step size K coprime to 12 that forms a star visiting ALL 12 beats in a single closed loop!",
-      targetNodes: 12
+      desc: "Find a step size K coprime to 12 that visits ALL 12 beats in a single closed loop!",
+      targetNodes: 12,
+      minK: 1
     },
     {
       title: "Level 2: The Square",
       N: 12,
       desc: "Find a step size K that completes a closed 4-beat loop (a square)!",
-      targetNodes: 4
+      targetNodes: 4,
+      minK: 1
     },
     {
       title: "Level 3: The Regular Pentagon",
       N: 15,
-      desc: "Clock size N = 15. Find a step size K that completes a closed loop visiting exactly 5 beats!",
-      targetNodes: 5
+      desc: "Clock size N = 15. Find a step size K that completes a closed 5-beat loop!",
+      targetNodes: 5,
+      minK: 1
     },
     {
       title: "Level 4: Prime 17-Star",
       N: 17,
-      desc: "N = 17 is Prime! Find a K (> 1) that visits all 17 beats in a complete loop.",
+      desc: "N = 17 is Prime! Find a step size K (> 1) that visits all 17 beats in a complete star loop.",
       targetNodes: 17,
       minK: 2
     }
   ];
 
-  let mode = 'puzzle'; // 'puzzle' or 'free'
+  let currentMode = 'puzzle'; // 'puzzle' or 'free'
   let currentLevelIdx = 0;
   
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
+  
+  const btnModePuzzle = document.getElementById('btn-mode-puzzle');
+  const btnModeFree = document.getElementById('btn-mode-free');
+  
+  const levelCard = document.getElementById('level-card');
+  const levelTitle = document.getElementById('level-title');
+  const levelDesc = document.getElementById('level-desc');
+  const prevLevelBtn = document.getElementById('prev-level-btn');
+  const headerNextBtn = document.getElementById('header-next-btn');
+  
+  const winBanner = document.getElementById('win-banner');
+  const bannerNextBtn = document.getElementById('banner-next-btn');
+  
+  const nGroup = document.getElementById('n-group');
   const nSlider = document.getElementById('n-slider');
   const kSlider = document.getElementById('k-slider');
   const bpmSlider = document.getElementById('bpm-slider');
   const playBtn = document.getElementById('play-btn');
-  const winBanner = document.getElementById('win-banner');
-  const nextLevelBtn = document.getElementById('next-level-btn');
-  const btnPuzzle = document.getElementById('btn-puzzle');
-  const btnFree = document.getElementById('btn-free');
-  const levelCard = document.getElementById('level-card');
-  const nGroup = document.getElementById('n-group');
 
   let N = levels[0].N;
   let K = 1;
@@ -258,36 +313,38 @@
     draw();
     updateStats();
 
-    // Check win condition ONLY when a full loop closes back to start (0)
+    // Trigger win check ONLY when the traveler completes a full closed loop back to node 0
     if (currentPos === 0) {
       checkWinCondition();
     }
   }
 
   function checkWinCondition() {
-    if (mode !== 'puzzle' || levelCleared) return;
+    if (currentMode !== 'puzzle' || levelCleared) return;
 
-    const currentLevel = levels[currentLevelIdx];
-    const validK = !currentLevel.minK || K >= currentLevel.minK;
+    const lvl = levels[currentLevelIdx];
+    const validK = K >= lvl.minK;
 
-    if (visitedNodes.size === currentLevel.targetNodes && validK) {
+    if (visitedNodes.size === lvl.targetNodes && validK) {
       levelCleared = true;
       winBanner.style.display = 'block';
       if (currentLevelIdx >= levels.length - 1) {
         document.getElementById('win-text').innerText = "🏆 You completed all levels! Modular Arithmetic Mastered!";
-        nextLevelBtn.style.display = 'none';
+        bannerNextBtn.style.display = 'none';
       } else {
         document.getElementById('win-text').innerText = "🎉 Harmony Achieved! Shape completed.";
-        nextLevelBtn.style.display = 'inline-block';
+        bannerNextBtn.style.display = 'inline-block';
       }
     }
   }
 
   function loadLevel(idx) {
-    const lvl = levels[idx];
+    currentLevelIdx = idx;
+    const lvl = levels[currentLevelIdx];
     N = lvl.N;
-    document.getElementById('level-title').innerText = lvl.title;
-    document.getElementById('level-desc').innerText = lvl.desc;
+    
+    levelTitle.innerText = lvl.title;
+    levelDesc.innerText = lvl.desc;
     
     kSlider.max = N - 1;
     K = 1;
@@ -300,31 +357,29 @@
     updateStats();
   }
 
-  function setMode(newMode) {
-    mode = newMode;
-    btnPuzzle.classList.toggle('active', mode === 'puzzle');
-    btnFree.classList.toggle('active', mode === 'free');
-    
-    if (mode === 'free') {
-      levelCard.style.display = 'none';
-      winBanner.style.display = 'none';
-      nGroup.style.display = 'flex';
-      kGroupStyleForFree();
-    } else {
+  function switchMode(newMode) {
+    currentMode = newMode;
+    if (currentMode === 'puzzle') {
+      btnModePuzzle.classList.add('active');
+      btnModeFree.classList.remove('active');
       levelCard.style.display = 'block';
       nGroup.style.display = 'none';
       loadLevel(currentLevelIdx);
+    } else {
+      btnModeFree.classList.add('active');
+      btnModePuzzle.classList.remove('active');
+      levelCard.style.display = 'none';
+      winBanner.style.display = 'none';
+      nGroup.style.display = 'flex';
+      
+      N = parseInt(nSlider.value);
+      kSlider.max = N - 1;
+      if (K >= N) K = N - 1;
+      kSlider.value = K;
+      document.getElementById('k-val').innerText = K;
+      reset();
+      updateStats();
     }
-  }
-
-  function kGroupStyleForFree() {
-    N = parseInt(nSlider.value);
-    kSlider.max = N - 1;
-    if (K >= N) K = N - 1;
-    kSlider.value = K;
-    document.getElementById('k-val').innerText = K;
-    reset();
-    updateStats();
   }
 
   function draw() {
@@ -373,6 +428,20 @@
     document.getElementById('stats').innerText = `Clock (N): ${N} | GCD(${N}, ${K}) = ${g} | Visited: ${visitedNodes.size}/${N}`;
   }
 
+  // Event Listeners
+  btnModePuzzle.addEventListener('click', () => switchMode('puzzle'));
+  btnModeFree.addEventListener('click', () => switchMode('free'));
+
+  prevLevelBtn.addEventListener('click', () => {
+    if (currentLevelIdx > 0) loadLevel(currentLevelIdx - 1);
+  });
+  headerNextBtn.addEventListener('click', () => {
+    if (currentLevelIdx < levels.length - 1) loadLevel(currentLevelIdx + 1);
+  });
+  bannerNextBtn.addEventListener('click', () => {
+    if (currentLevelIdx < levels.length - 1) loadLevel(currentLevelIdx + 1);
+  });
+
   kSlider.addEventListener('input', (e) => {
     K = parseInt(e.target.value);
     document.getElementById('k-val').innerText = K;
@@ -383,10 +452,13 @@
   });
 
   nSlider.addEventListener('input', (e) => {
-    if (mode === 'free') {
+    if (currentMode === 'free') {
       N = parseInt(e.target.value);
       document.getElementById('n-val').innerText = N;
-      kGroupStyleForFree();
+      kSlider.max = N - 1;
+      if (K >= N) { K = N - 1; kSlider.value = K; document.getElementById('k-val').innerText = K; }
+      reset();
+      updateStats();
     }
   });
 
@@ -410,17 +482,8 @@
     }
   });
 
-  nextLevelBtn.addEventListener('click', () => {
-    if (currentLevelIdx < levels.length - 1) {
-      currentLevelIdx++;
-      loadLevel(currentLevelIdx);
-    }
-  });
-
-  btnPuzzle.addEventListener('click', () => setMode('puzzle'));
-  btnFree.addEventListener('click', () => setMode('free'));
-
-  loadLevel(0);
+  // Initialize
+  switchMode('puzzle');
 </script>
 </body>
 </html>
