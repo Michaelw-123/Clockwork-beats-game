@@ -144,15 +144,16 @@
     osc.stop(audioCtx.currentTime + 0.3);
   }
 
-  function step() {
-    const nextPos = (currentPos + K) % N;
-    visitedEdges.add(`${currentPos}->${nextPos}`);
-    currentPos = nextPos;
-    visitedNodes.add(currentPos);
-    
-    if (audioCtx) playSynth(currentPos);
-    draw();
-  }
+ function step() {
+  const nextPos = (currentPos + K) % N;
+  visitedEdges.add(`${currentPos}->${nextPos}`);
+  currentPos = nextPos;
+  visitedNodes.add(currentPos);
+  
+  if (audioCtx) playSynth(currentPos);
+  draw();
+  updateStats();
+}
 
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
